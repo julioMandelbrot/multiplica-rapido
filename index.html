@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>MultiplicaRápido - ¡Practica tus tablas!</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#28a745" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="MultiplicaRápido" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      min-height: 100svh;
+      background-color: #f0f8ff;
+      text-align: center;
+      margin: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .container {
+      background-color: #fff;
+      width: min(720px, 92vw);
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+    }
+    h1 { color: #333; margin-top: 0; }
+
+    #configuracion p { margin-top: 0; }
+
+    .levels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .levels button {
+      padding: 12px 10px;
+      font-size: 1.05em;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      cursor: pointer;
+      transition: transform .05s ease, opacity .15s ease;
+    }
+    .levels button:active { transform: translateY(1px); }
+    .btn-principiante { background-color: #81c784; }
+    .btn-intermedio   { background-color: #42a5f5; }
+    .btn-pro          { background-color: #ef5350; }
+    .levels button.active { outline: 3px solid rgba(0,0,0,.1); filter: saturate(1.2); }
+
+    .ops {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .ops label {
+      text-align: left;
+      color: #333;
+      font-weight: 600;
+    }
+    .ops input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      font-size: 1.1em;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    #btnComenzar {
+      margin-top: 12px;
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1.1em;
+      border: none;
+      border-radius: 8px;
+      background-color: #28a745;
+      color: white;
+      cursor: pointer;
+      opacity: .85;
+    }
+    #btnComenzar:disabled { opacity: .45; cursor: not-allowed; }
+    #btnComenzar:not(:disabled):hover { opacity: 1; }
+
+    #juego input[type="number"] {
+      padding: 10px;
+      font-size: 1.2em;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+      width: 200px;
+    }
+    #btnVerificar {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      background-color: #28a745;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+    #btnVerificar:hover { opacity: .9; }
+
+    #resultado, #cronometro {
+      margin-top: 18px;
+      font-size: 1.35em;
+      font-weight: 700;
+    }
+    .correcto { color: #28a745; }
+    .incorrecto { color: #dc3545; }
+
+    #btnNuevaPartida {
+      padding: 10px 20px;
+      font-size: 1.1em;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      margin-top: 14px;
+    }
+    #btnNuevaPartida:hover { background-color: #0056b3; }
+
+    .hidden { display: none; }
+    .hint { color:#666; font-size: .92em; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="titulo">¡Bienvenido a MultiplicaRápido! 🚀</h1>
+
+    <!-- Configuración -->
+    <div id="configuracion">
+      <p>1) Elige tu nivel de dificultad. 2) Indica cuántas operaciones quieres practicar. 3) Pulsa <strong>Comenzar</strong>.</p>
+      <div class="levels">
+        <button id="btnPrincipiante" class="btn-principiante" aria-pressed="false">Principiante</button>
+        <button id="btnIntermedio" class="btn-intermedio" aria-pressed="false">Intermedio</button>
+        <button id="btnPro" class="btn-pro" aria-pressed="false">Pro</button>
+      </div>
+
+      <div class="ops">
+        <label for="inputOperaciones">Número de operaciones (1–200):</label>
+        <input id="inputOperaciones" type="number" min="1" max="200" value="10"
+               inputmode="numeric" pattern="[0-9]*" aria-describedby="opsHint" />
+      </div>
+      <div class="hint" id="opsHint">Este valor se aplicará al nivel seleccionado (Principiante, Intermedio o Pro).</div>
+
+      <button id="btnComenzar" disabled>Comenzar</button>
+    </div>
+
+    <!-- Juego -->
+    <div id="juego" class="hidden" aria-live="polite">
+      <p><span id="pregunta-texto">Cargando...</span></p>
+      <p id="pregunta-operacion"></p>
+      <div>
+        <input type="number" id="inputRespuesta" placeholder="Tu respuesta" inputmode="numeric" pattern="[0-9]*" />
+        <button id="btnVerificar">Verificar</button>
+      </div>
+      <p id="resultado" role="status" aria-live="polite"></p>
+      <p id="cronometro">Tiempo: 0s</p>
+    </div>
+
+    <!-- Final -->
+    <div id="final" class="hidden">
+      <p id="resultados-finales"></p>
+    </div>
+  </div>
+
+  <script>
+    // -----------------------------
+    // iOS/Safari audio unlock (iPhone 16, etc.)
+    // -----------------------------
+    let audioCtxUnlocked = false;
+    let audioCtx;
+    function unlockAudioOnce() {
+      if (audioCtxUnlocked) return;
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          audioCtx = new AC();
+          const buffer = audioCtx.createBuffer(1, 1, 22050);
+          const src = audioCtx.createBufferSource();
+          src.buffer = buffer;
+          src.connect(audioCtx.destination);
+          if (audioCtx.state === "suspended") audioCtx.resume();
+          src.start(0);
+        }
+      } catch (e) {}
+      audioCtxUnlocked = true;
+      window.removeEventListener("touchstart", unlockAudioOnce, true);
+      window.removeEventListener("pointerdown", unlockAudioOnce, true);
+      window.removeEventListener("click", unlockAudioOnce, true);
+    }
+    window.addEventListener("touchstart", unlockAudioOnce, true);
+    window.addEventListener("pointerdown", unlockAudioOnce, true);
+    window.addEventListener("click", unlockAudioOnce, true);
+
+    // -----------------------------
+    // Estado del juego
+    // -----------------------------
+    let num1, num2, resultadoReal;
+    let numOperacionesTotal = 10;
+    let operacionesRestantes;
+    let aciertos = 0;
+    let fallos = 0;
+    let tiempoInicio;
+    let intervaloCronometro;
+    let nivelDificultad = null;
+
+    const configDiv = document.getElementById('configuracion');
+    const juegoDiv = document.getElementById('juego');
+    const finalDiv = document.getElementById('final');
+    const tituloH1 = document.getElementById('titulo');
+    const preguntaTextoElement = document.getElementById('pregunta-texto');
+    const preguntaOperacionElement = document.getElementById('pregunta-operacion');
+    const inputRespuesta = document.getElementById('inputRespuesta');
+    const btnVerificar = document.getElementById('btnVerificar');
+    const resultadoElement = document.getElementById('resultado');
+    const cronometroElement = document.getElementById('cronometro');
+    const resultadosFinalesElement = document.getElementById('resultados-finales');
+    const inputOperaciones = document.getElementById('inputOperaciones');
+    const btnComenzar = document.getElementById('btnComenzar');
+
+    const btnPrincipiante = document.getElementById('btnPrincipiante');
+    const btnIntermedio   = document.getElementById('btnIntermedio');
+    const btnPro          = document.getElementById('btnPro');
+    const levelButtons = [btnPrincipiante, btnIntermedio, btnPro];
+
+    // -----------------------------
+    // Audio seguro (iOS friendly)
+    // -----------------------------
+    function mkAudio(url, loop=false) {
+      const a = new Audio(url);
+      a.preload = 'auto';
+      a.crossOrigin = 'anonymous';
+      a.loop = !!loop;
+      return a;
+    }
+
+    const audioAcierto = mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-game-positive-notification-202.mp3");
+    const audioError   = mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-2475.mp3");
+    const audioFinal   = mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-clapping-crowd-522.mp3", true);
+
+    const musicas = {
+      principiante: mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-happy-and-upbeat-music-2438.mp3", true),
+      intermedio:   mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-game-music-778.mp3", true),
+      pro:          mkAudio("https://assets.mixkit.co/sfx/preview/mixkit-techno-game-music-560.mp3", true)
+    };
+
+    function safePlay(audio) {
+      const p = audio.play();
+      if (p && typeof p.then === "function") {
+        p.catch(() => {
+          document.addEventListener("click", () => audio.play().catch(()=>{}), { once: true, capture: true });
+        });
+      }
+    }
+
+    function detenerMusica() {
+      Object.values(musicas).forEach(m => { m.pause(); m.currentTime = 0; });
+    }
+
+    // -----------------------------
+    // UI de niveles
+    // -----------------------------
+    function setNivel(nivel) {
+      nivelDificultad = nivel;
+      levelButtons.forEach(b => {
+        const isActive =
+          (nivel === 'principiante' && b === btnPrincipiante) ||
+          (nivel === 'intermedio'   && b === btnIntermedio)   ||
+          (nivel === 'pro'          && b === btnPro);
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+      validateCanStart();
+    }
+
+    btnPrincipiante.addEventListener('click', () => setNivel('principiante'));
+    btnIntermedio.addEventListener('click',   () => setNivel('intermedio'));
+    btnPro.addEventListener('click',          () => setNivel('pro'));
+
+    function validateCanStart() {
+      const n = parseInt(inputOperaciones.value, 10);
+      const validOps = Number.isInteger(n) && n >= 1 && n <= 200;
+      btnComenzar.disabled = !(nivelDificultad && validOps);
+    }
+
+    inputOperaciones.addEventListener('input', validateCanStart);
+
+    btnComenzar.addEventListener('click', () => {
+      const n = parseInt(inputOperaciones.value, 10);
+      if (!Number.isInteger(n) || n < 1 || n > 200 || !nivelDificultad) return;
+      numOperacionesTotal = n;
+      comenzarJuego(nivelDificultad);
+    });
+
+    // -----------------------------
+    // Lógica del juego
+    // -----------------------------
+    function comenzarJuego(nivel) {
+      operacionesRestantes = numOperacionesTotal;
+      aciertos = 0;
+      fallos = 0;
+
+      configDiv.classList.add('hidden');
+      juegoDiv.classList.remove('hidden');
+      finalDiv.classList.add('hidden');
+      tituloH1.textContent = "🚀 MultiplicaRápido 🚀";
+
+      tiempoInicio = Date.now();
+      iniciarCronometro();
+      detenerMusica();
+      safePlay(musicas[nivel]);
+      generarMultiplicacion();
+      inputRespuesta.focus({ preventScroll: true });
+    }
+
+    function generarMultiplicacion() {
+      if (operacionesRestantes <= 0) {
+        finalizarJuego();
+        return;
+      }
+
+      let min1, max1, min2, max2;
+      if (nivelDificultad === 'principiante') {
+        min1 = 1; max1 = 5;
+        min2 = 1; max2 = 9;
+      } else if (nivelDificultad === 'intermedio') {
+        min1 = 2; max1 = 11;
+        min2 = 1; max2 = 9;
+      } else {
+        min1 = 1; max1 = 50;
+        min2 = 1; max2 = 9;
+      }
+
+      const unSoloDigito = Math.random() < 0.5;
+      if (unSoloDigito) {
+        num1 = Math.floor(Math.random() * (max1 - min1 + 1)) + min1;
+        num2 = Math.floor(Math.random() * (max2 - min2 + 1)) + min2;
+      } else {
+        num1 = Math.floor(Math.random() * (max2 - min2 + 1)) + min2;
+        num2 = Math.floor(Math.random() * (max1 - min1 + 1)) + min1;
+      }
+
+      resultadoReal = num1 * num2;
+      const numHecha = (numOperacionesTotal - operacionesRestantes + 1);
+      preguntaTextoElement.textContent = `Operación ${numHecha} de ${numOperacionesTotal}:`;
+      preguntaOperacionElement.innerHTML = `<strong>¿Cuánto es ${num1} × ${num2}?</strong>`;
+      inputRespuesta.value = '';
+      resultadoElement.textContent = '';
+      inputRespuesta.focus({ preventScroll: true });
+    }
+
+    function verificarRespuesta() {
+      const respuestaUsuario = parseInt(inputRespuesta.value, 10);
+      if (Number.isNaN(respuestaUsuario)) {
+        resultadoElement.textContent = '❌ Por favor, ingresa un número.';
+        resultadoElement.className = 'incorrecto';
+        return;
+      }
+
+      if (respuestaUsuario === resultadoReal) {
+        resultadoElement.textContent = '¡✅ Correcto!';
+        resultadoElement.className = 'correcto';
+        aciertos++;
+        safePlay(audioAcierto);
+        setTimeout(() => { audioAcierto.pause(); audioAcierto.currentTime = 0; }, 900);
+      } else {
+        resultadoElement.textContent = `❌ Incorrecto. La respuesta correcta era ${resultadoReal}.`;
+        resultadoElement.className = 'incorrecto';
+        fallos++;
+        safePlay(audioError);
+        setTimeout(() => { audioError.pause(); audioError.currentTime = 0; }, 900);
+      }
+
+      operacionesRestantes--;
+      setTimeout(generarMultiplicacion, 900);
+    }
+
+    function iniciarCronometro() {
+      intervaloCronometro = setInterval(() => {
+        const s = Math.floor((Date.now() - tiempoInicio) / 1000);
+        cronometroElement.textContent = `Tiempo: ${s}s`;
+      }, 1000);
+    }
+
+    function detenerCronometro() {
+      clearInterval(intervaloCronometro);
+    }
+
+    function finalizarJuego() {
+      detenerCronometro();
+      const tiempoFinal = Math.floor((Date.now() - tiempoInicio) / 1000);
+
+      juegoDiv.classList.add('hidden');
+      finalDiv.classList.remove('hidden');
+      detenerMusica();
+      safePlay(audioFinal);
+
+      resultadosFinalesElement.innerHTML = `
+        ¡Juego terminado! 🎉<br>
+        Total de operaciones: ${numOperacionesTotal}<br>
+        Aciertos: ${aciertos}<br>
+        Fallos: ${fallos}<br>
+        Tiempo total: ${tiempoFinal} segundos<br><br>
+        <button id="btnNuevaPartida">Jugar de nuevo</button>
+      `;
+
+      document.getElementById('btnNuevaPartida').addEventListener('click', () => {
+        audioFinal.pause();
+        audioFinal.currentTime = 0;
+        juegoDiv.classList.add('hidden');
+        finalDiv.classList.add('hidden');
+        configDiv.classList.remove('hidden');
+        tituloH1.textContent = "¡Bienvenido a MultiplicaRápido! 🚀";
+      }, { once: true });
+    }
+
+    btnVerificar.addEventListener('click', verificarRespuesta);
+    inputRespuesta.addEventListener('keyup', (event) => {
+      if (event.key === 'Enter') verificarRespuesta();
+    });
+
+    // -----------------------------
+    // Service Worker (PWA)
+    // -----------------------------
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(() => console.log('Service Worker registrado'))
+          .catch(() => console.log('Service Worker no disponible'));
+      });
+    }
+  </script>
+</body>
+</html>
