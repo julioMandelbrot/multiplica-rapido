@@ -1,3 +1,4 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,8 +22,8 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      min-height: 100svh;
+      height: 100vh;          /* fallback */
+      min-height: 100svh;     /* iOS Safari / modern */
       background-color: #f0f8ff;
       text-align: center;
       margin: 0;
@@ -154,7 +155,7 @@
       </div>
 
       <div class="ops">
-        <label for="inputOperaciones">Número de operaciones (1–200):</label>
+        <label for="inputOperaciones">Número de operaciones:</label>
         <input id="inputOperaciones" type="number" min="1" max="200" value="10"
                inputmode="numeric" pattern="[0-9]*" aria-describedby="opsHint" />
       </div>
@@ -193,6 +194,7 @@
         const AC = window.AudioContext || window.webkitAudioContext;
         if (AC) {
           audioCtx = new AC();
+          // Reproduce un buffer vacío para desbloquear
           const buffer = audioCtx.createBuffer(1, 1, 22050);
           const src = audioCtx.createBufferSource();
           src.buffer = buffer;
@@ -200,7 +202,9 @@
           if (audioCtx.state === "suspended") audioCtx.resume();
           src.start(0);
         }
-      } catch (e) {}
+      } catch (e) {
+        // Nada
+      }
       audioCtxUnlocked = true;
       window.removeEventListener("touchstart", unlockAudioOnce, true);
       window.removeEventListener("pointerdown", unlockAudioOnce, true);
@@ -220,7 +224,7 @@
     let fallos = 0;
     let tiempoInicio;
     let intervaloCronometro;
-    let nivelDificultad = null;
+    let nivelDificultad = null; // 'principiante' | 'intermedio' | 'pro'
 
     const configDiv = document.getElementById('configuracion');
     const juegoDiv = document.getElementById('juego');
@@ -249,6 +253,7 @@
       a.preload = 'auto';
       a.crossOrigin = 'anonymous';
       a.loop = !!loop;
+      // a.muted = false; // por si se hereda estado
       return a;
     }
 
@@ -263,9 +268,11 @@
     };
 
     function safePlay(audio) {
+      // En iOS, play() puede rechazar si no hay gesto del usuario o está suspendido.
       const p = audio.play();
       if (p && typeof p.then === "function") {
         p.catch(() => {
+          // Reintento suave tras un gesto (ya desbloqueamos arriba)
           document.addEventListener("click", () => audio.play().catch(()=>{}), { once: true, capture: true });
         });
       }
@@ -345,6 +352,7 @@
         min1 = 2; max1 = 11;
         min2 = 1; max2 = 9;
       } else {
+        // pro
         min1 = 1; max1 = 50;
         min2 = 1; max2 = 9;
       }
@@ -380,17 +388,17 @@
         resultadoElement.className = 'correcto';
         aciertos++;
         safePlay(audioAcierto);
-        setTimeout(() => { audioAcierto.pause(); audioAcierto.currentTime = 0; }, 900);
+        setTimeout(() => { audioAcierto.pause(); audioAcierto.currentTime = 0; }, 3000);
       } else {
         resultadoElement.textContent = `❌ Incorrecto. La respuesta correcta era ${resultadoReal}.`;
         resultadoElement.className = 'incorrecto';
         fallos++;
         safePlay(audioError);
-        setTimeout(() => { audioError.pause(); audioError.currentTime = 0; }, 900);
+        setTimeout(() => { audioError.pause(); audioError.currentTime = 0; }, 3000);
       }
 
       operacionesRestantes--;
-      setTimeout(generarMultiplicacion, 900);
+      setTimeout(generarMultiplicacion, 3000);
     }
 
     function iniciarCronometro() {
@@ -425,6 +433,7 @@
       document.getElementById('btnNuevaPartida').addEventListener('click', () => {
         audioFinal.pause();
         audioFinal.currentTime = 0;
+        // Reinicio "soft": vuelve a la configuración manteniendo la selección previa
         juegoDiv.classList.add('hidden');
         finalDiv.classList.add('hidden');
         configDiv.classList.remove('hidden');
